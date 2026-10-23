@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14202b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="นับท่า">
+<title>นับท่า: สควอต วิดพื้น ดึงข้อ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800&family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14202b; --panel:#1d2d3b; --line:#2c4153;
+    --ink:#e9eef2; --mute:#9bb0bf;
+    --accent:#ff7a1a; --ok:#3ddbb0; --warn:#ffcf5c; --bad:#ff6b6b;
+    --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+    --body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-text-size-adjust:100%}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+  [hidden]{display:none !important}
+
+  .screen{min-height:100dvh;display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+
+  /* หน้าเลือกท่า */
+  #home{padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));
+    padding-top:max(28px,env(safe-area-inset-top,0px));max-width:560px;margin:0 auto;width:100%}
+  #home h1{font-size:1.9rem;font-weight:700;margin:0 0 6px}
+  #home .lead{margin:0 0 24px;color:var(--mute);line-height:1.6}
+  .modes{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+  .modes button{width:100%;text-align:left;padding:18px 20px;border:0;border-left:6px solid var(--accent);
+    background:var(--panel);border-radius:4px}
+  .modes button:active{background:#25394a}
+  .modes .n{display:block;font-size:1.8rem;font-weight:700;line-height:1.25}
+  .modes .t{display:block;color:var(--mute);margin-top:4px;line-height:1.55;font-size:.95rem}
+  .home-foot{margin-top:24px;display:flex;flex-direction:column;gap:12px;color:var(--mute);font-size:.9rem;line-height:1.6}
+  .link{align-self:flex-start;background:none;border:0;padding:8px 0;color:var(--ink);text-decoration:underline;text-underline-offset:4px;font-size:1rem}
+
+  /* หน้ากล้อง */
+  #cam{height:100dvh;min-height:0}
+  .stage{position:relative;flex:1;min-height:0;background:#000;overflow:hidden}
+  .mirror{position:absolute;inset:0}
+  .mirror.flip{transform:scaleX(-1)}
+  .mirror video,.mirror canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .topbar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:10px 12px;background:linear-gradient(rgba(0,0,0,.65),transparent)}
+  .topbar strong{font-size:1.1rem}
+  .pill{background:rgba(20,32,43,.82);border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-height:40px}
+  .hud{position:absolute;left:0;right:0;bottom:0;padding:18px 16px 14px;
+    background:linear-gradient(transparent,rgba(0,0,0,.72));display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+  .count{font-family:var(--display);font-weight:800;font-size:clamp(6rem,30vw,11rem);line-height:.82;color:var(--accent);
+    text-shadow:0 2px 14px rgba(0,0,0,.55);font-variant-numeric:tabular-nums}
+  .status{display:flex;align-items:center;gap:10px;max-width:60%;text-align:right;font-weight:600;line-height:1.4;
+    background:rgba(20,32,43,.82);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .status::before{content:"";flex:none;width:12px;height:12px;border-radius:50%;background:var(--warn)}
+  .status[data-tone="ok"]::before{background:var(--ok)}
+  .status[data-tone="warn"]::before{background:var(--warn)}
+  .debug{position:absolute;left:10px;top:64px;right:10px;font:12px/1.5 ui-monospace,Menlo,monospace;color:#fff;
+    background:rgba(0,0,0,.6);padding:8px 10px;border-radius:6px;white-space:pre-wrap;pointer-events:none}
+  .controls{display:flex;gap:10px;padding:10px 12px;background:var(--bg)}
+  .controls button{flex:1;min-height:48px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  .controls button:active{background:#25394a}
+
+  #gate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    padding:24px;text-align:center;background:rgba(10,16,22,.8)}
+  #gateTitle{font-family:var(--display);font-weight:800;font-size:clamp(3rem,18vw,7rem);line-height:1}
+  #gateTitle.txt{font-family:var(--body);font-weight:700;font-size:1.4rem}
+  #gateBody{max-width:34ch;line-height:1.65;color:var(--mute)}
+  #gateBtn{background:var(--accent);color:#1a0d00;border:0;border-radius:8px;padding:14px 26px;font-weight:700;font-size:1.1rem;min-height:52px}
+
+  dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:20px;width:min(92vw,420px)}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog h2{margin:0 0 14px;font-size:1.2rem}
+  fieldset{border:0;padding:0;margin:0 0 16px}
+  legend{font-weight:600;margin-bottom:6px;padding:0}
+  .opt{display:flex;align-items:center;gap:10px;padding:8px 0;min-height:40px}
+  .opt input{width:20px;height:20px;accent-color:var(--accent)}
+  .hint{color:var(--mute);font-size:.88rem;line-height:1.55;margin:2px 0 0 30px}
+  .dlg-actions{display:flex;justify-content:flex-end}
+  .dlg-actions button{background:var(--accent);color:#1a0d00;border:0;border-radius:8px;padding:10px 22px;font-weight:700;min-height:44px}
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
+</style>
+</head>
+<body>
+
+<main id="home" class="screen">
+  <h1>นับท่า</h1>
+  <p class="lead">เลือกท่าก่อนเริ่ม ระบบจะนับเฉพาะท่านั้น แล้วตั้งมือถือให้เห็นตัวตามคำแนะนำของแต่ละท่า</p>
+  <ul class="modes">
+    <li><button data-ex="squat"><span class="n">สควอต</span>
+      <span class="t">ตั้งกล้องด้านหน้าหรือเฉียง ให้เห็นตั้งแต่หัวถึงเท้า</span></button></li>
+    <li><button data-ex="pushup"><span class="n">วิดพื้น</span>
+      <span class="t">ตั้งกล้องด้านข้างลำตัว ระดับต่ำใกล้พื้น ให้เห็นตั้งแต่หัวถึงเท้า</span></button></li>
+    <li><button data-ex="pullup"><span class="n">ดึงข้อ</span>
+      <span class="t">ตั้งกล้องด้านหน้าหรือด้านข้าง ให้เห็นแขนทั้งสองข้างและมือที่จับบาร์</span></button></li>
+  </ul>
+  <div class="home-foot">
+    <button class="link" data-open-settings>ตั้งค่า</button>
+    <span>ภาพจากกล้องถูกประมวลผลในเครื่องของคุณ ไม่ถูกอัปโหลด ครั้งแรกต้องต่ออินเทอร์เน็ตเพื่อโหลดโมเดลตรวจจับท่าทาง</span>
+  </div>
+</main>
+
+<section id="cam" class="screen" hidden>
+  <div class="stage">
+    <div class="mirror" id="mirror">
+      <video id="video" playsinline muted autoplay></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div class="topbar">
+      <button class="pill" id="back">‹ กลับ</button>
+      <strong id="exName"></strong>
+      <button class="pill" id="flip">สลับกล้อง</button>
+    </div>
+    <pre class="debug" id="debug" hidden></pre>
+    <div class="hud">
+      <div class="count" id="count" aria-live="polite">0</div>
+      <div class="status" id="status" data-tone="warn">รอเริ่ม</div>
+    </div>
+    <div id="gate" hidden>
+      <div id="gateTitle"></div>
+      <div id="gateBody"></div>
+      <button id="gateBtn" hidden></button>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="minus">ลบ 1 ครั้ง</button>
+    <button id="reset">เริ่มนับใหม่</button>
+    <button data-open-settings>ตั้งค่า</button>
+  </div>
+</section>
+
+<dialog id="settings">
+  <h2>ตั้งค่า</h2>
+  <fieldset>
+    <legend>ความเข้มงวดในการนับ</legend>
+    <label class="opt"><input type="radio" name="strict" value="0"> เข้มงวด (ต้องลงลึกและเหยียดสุด)</label>
+    <label class="opt"><input type="radio" name="strict" value="1"> ปกติ</label>
+    <label class="opt"><input type="radio" name="strict" value="2"> ผ่อนปรน (นับง่ายขึ้น)</label>
+  </fieldset>
+  <fieldset>
+    <legend>โมเดลตรวจจับ</legend>
+    <label class="opt"><input type="radio" name="model" value="lite"> เร็ว ประหยัดแบตและความร้อน</label>
+    <label class="opt"><input type="radio" name="model" value="full"> แม่นกว่า แต่หนักกว่า</label>
+    <p class="hint">มีผลเมื่อเข้าท่าครั้งถัดไป</p>
+  </fieldset>
+  <fieldset>
+    <label class="opt"><input type="checkbox" id="optSound"> เสียงบี๊บเมื่อนับ</label>
+    <label class="opt"><input type="checkbox" id="optDebug"> แสดงค่ามุมสำหรับจูนการนับ</label>
+  </fieldset>
+  <div class="dlg-actions"><button id="settingsClose">เสร็จ</button></div>
+</dialog>
+
+<script type="module">
+/* ============ ค่าคงที่ ============ */
+const VER = "0.10.14";
+const CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}`;
+const MODELS = {
+  lite: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+  full: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+};
+const VIS = 0.5;          // ความมั่นใจขั้นต่ำของจุดข้อต่อ
+const NEED = 3;           // ต้องเข้าเงื่อนไขติดกันกี่เฟรมถึงนับว่าถึงจุดนั้นจริง
+const OFFSETS = [-8, 0, 12]; // เข้มงวด / ปกติ / ผ่อนปรน (องศา)
+const SIDES = {
+  L:{sh:11,el:13,wr:15,hip:23,kn:25,an:27},
+  R:{sh:12,el:14,wr:16,hip:24,kn:26,an:28},
+};
+const BONES = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+
+const $ = s => document.querySelector(s);
+const video = $("#video"), canvas = $("#overlay"), ctx = canvas.getContext("2d");
+
+/* ============ ตั้งค่า ============ */
+const KEY = "repcounter.settings.v1";
+const settings = {strict:1, model:"lite", sound:true, debug:false};
+try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
+if (![0,1,2].includes(settings.strict)) settings.strict = 1;
+if (!MODELS[settings.model]) settings.model = "lite";
+const saveSettings = () => { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch {} };
+
+/* ============ สถานะ ============ */
+const st = {
+  ex:null, running:false, facing:"user", stream:null,
+  vision:null, landmarker:null, modelKey:"", delegate:"GPU", recovering:false,
+  pts:Array.from({length:33}, () => ({x:0,y:0,v:0})), hasPts:false,
+  phase:"wait", count:0, rc:0, pc:0, bad:0, lost:0, lastCount:0,
+  raf:0, lastT:-1, timer:0, wake:null,
+};
+const P = i => st.pts[i];
+const vis = (...ids) => ids.every(i => P(i).v >= VIS);
+const avg = a => a.reduce((s,x) => s+x, 0) / a.length;
+const mid = ids => ({x:avg(ids.map(i => P(i).x)), y:avg(ids.map(i => P(i).y))});
+function ang(a, b, c){            // มุมที่จุด b (พิกเซล จึงไม่เพี้ยนตามสัดส่วนภาพ)
+  const v1 = [a.x-b.x, a.y-b.y], v2 = [c.x-b.x, c.y-b.y];
+  const m = Math.hypot(...v1) * Math.hypot(...v2);
+  if (!m) return 180;
+  return Math.acos(Math.max(-1, Math.min(1, (v1[0]*v2[0] + v1[1]*v2[1]) / m))) * 180 / Math.PI;
+}
+const sideScore = s => (P(s.sh).v+P(s.el).v+P(s.wr).v+P(s.hip).v+P(s.kn).v+P(s.an).v) / 6;
+const bestSide = () => sideScore(SIDES.L) >= sideScore(SIDES.R) ? SIDES.L : SIDES.R;
+
+/* ============ นิยามแต่ละท่า ============
+   evaluate(off) คืนค่า:
+   visible = เห็นจุดที่ต้องใช้ครบไหม
+   ok      = ท่าทางโดยรวมถูกต้องไหม (ถ้าผิดนานเกินไป ระบบกลับไปรอท่าเริ่มต้นโดยไม่นับ)
+   ready   = อยู่ที่ท่าเริ่มต้น/จบรอบ
+   peak    = ถึงจุดสุดของรอบ
+   off     = ค่าปรับความเข้มงวด (บวก = ผ่อนปรน)                                   */
+const EX = {
+  squat: {
+    name:"สควอต", joints:[23,24,25,26,27,28],
+    start:"ยืนตรงให้เห็นเต็มตัว", peakMsg:"ต่ำพอแล้ว ลุกขึ้น",
+    evaluate(off){
+      const legs = [SIDES.L, SIDES.R].filter(s => vis(s.hip, s.kn, s.an));
+      if (!legs.length) return {visible:false, hint:"ให้เห็นสะโพก เข่า และข้อเท้า ถอยกล้องให้เห็นเต็มตัว"};
+      const knee = avg(legs.map(s => ang(P(s.hip), P(s.kn), P(s.an))));
+      const sh = [11,12].filter(i => P(i).v >= VIS), hp = [23,24].filter(i => P(i).v >= VIS);
+      let tilt = 0;
+      if (sh.length && hp.length){
+        const a = mid(sh), b = mid(hp);
+        tilt = Math.atan2(Math.abs(a.x-b.x), Math.abs(a.y-b.y)) * 180 / Math.PI;
+      }
+      const upright = tilt < 35;
+      const readyAt = 160 - off, peakAt = 100 + off;
+      const ready = knee > readyAt && upright;
+      return {visible:true, ok:true, ready, peak:knee < peakAt, metric:knee, label:"มุมเข่า",
+        extra:`ลำตัวเอียง ${tilt.toFixed(0)}°\nต้องต่ำกว่า ${peakAt}° แล้วเหยียดเกิน ${readyAt}°`,
+        hint: ready ? "" : (upright ? "เหยียดเข่าให้ตรงก่อนเริ่ม" : "ยืนตัวตรง ลำตัวตั้งขึ้น")};
+    },
+  },
+
+  pushup: {
+    name:"วิดพื้น", joints:[11,12,13,14,15,16],
+    start:"ตั้งท่าวิดพื้น แขนเหยียดตรง", peakMsg:"ต่ำพอแล้ว ดันขึ้น",
+    evaluate(off){
+      const s = bestSide();
+      if (!vis(s.sh, s.el, s.wr, s.hip))
+        return {visible:false, hint:"ให้เห็นไหล่ ศอก ข้อมือ และสะโพก ตั้งกล้องด้านข้างลำตัว"};
+      const foot = P(s.an).v >= 0.4 ? P(s.an) : (P(s.kn).v >= 0.4 ? P(s.kn) : null);
+      if (!foot) return {visible:false, hint:"ให้เห็นเท้าในภาพด้วย ถอยกล้องออก"};
+      const elbow = ang(P(s.sh), P(s.el), P(s.wr));
+      const tilt = Math.atan2(Math.abs(foot.y-P(s.sh).y), Math.abs(foot.x-P(s.sh).x)) * 180 / Math.PI; // 0 = ขนานพื้น
+      const line = ang(P(s.sh), P(s.hip), foot);
+      const horizontal = tilt < 38, straight = line > 145;
+      const ok = horizontal && straight;
+      const readyAt = 155 - off, peakAt = 90 + off;
+      return {visible:true, ok, ready: ok && elbow > readyAt, peak: ok && elbow < peakAt, metric:elbow, label:"มุมศอก",
+        extra:`ลำตัวเอียงจากพื้น ${tilt.toFixed(0)}° (ต้อง <38)\nลำตัวตรง ${line.toFixed(0)}° (ต้อง >145)\nต้องต่ำกว่า ${peakAt}° แล้วเหยียดเกิน ${readyAt}°`,
+        hint: ok ? "เหยียดแขนให้ตรงก่อนเริ่ม" : (horizontal ? "ทำลำตัวให้เป็นเส้นตรง สะโพกไม่ตก ไม่โด่ง" : "ลำตัวต้องขนานพื้นในท่าวิดพื้น")};
+    },
+  },
+
+  pullup: {
+    name:"ดึงข้อ", joints:[0,13,14,15,16],
+    start:"แขวนบาร์ แขนเหยียดตรง", peakMsg:"ถึงบนแล้ว ลงช้าๆ",
+    evaluate(off){
+      const arms = [SIDES.L, SIDES.R].filter(s => vis(s.sh, s.el, s.wr));
+      if (!arms.length) return {visible:false, hint:"ให้เห็นไหล่ ศอก และข้อมือ"};
+      const H = canvas.height || 1;
+      const elbow = avg(arms.map(s => ang(P(s.sh), P(s.el), P(s.wr))));
+      const wristY = avg(arms.map(s => P(s.wr).y));
+      const above = arms.every(s => P(s.wr).y < P(s.sh).y - 0.01*H);   // มือเหนือไหล่
+      const noseUp = P(0).v < VIS ? true : P(0).y < wristY + 0.02*H;    // หัวพ้นมือ
+      const readyAt = 150 - off, peakAt = 80 + off;
+      return {visible:true, ok:above, ready: above && elbow > readyAt, peak: above && elbow < peakAt && noseUp, metric:elbow, label:"มุมศอก",
+        extra:`มือเหนือไหล่ ${above?"ใช่":"ไม่"}  หัวพ้นมือ ${noseUp?"ใช่":"ไม่"}\nต้องต่ำกว่า ${peakAt}° แล้วเหยียดเกิน ${readyAt}°`,
+        hint: above ? "เหยียดแขนให้ตรงก่อนเริ่ม" : "จับบาร์ให้ข้อมืออยู่เหนือไหล่"};
+    },
+  },
+};
+
+/* ============ เสียง ============ */
+let actx = null;
+function unlockAudio(){
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch {}
+}
+function beep(freq = 880, dur = .08){
+  if (!settings.sound || !actx) return;
+  try {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine"; o.frequency.value = freq; g.gain.value = .15;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + dur);
+    o.start(); o.stop(actx.currentTime + dur + .02);
+  } catch {}
+}
+
+/* ============ โมเดล ============ */
+async function getVision(){
+  if (st.vision) return st.vision;
+  const mod = await import(`${CDN}/vision_bundle.mjs`);
+  const fileset = await mod.FilesetResolver.forVisionTasks(`${CDN}/wasm`);
+  return st.vision = {mod, fileset};
+}
+async function getLandmarker(){
+  if (st.landmarker && st.modelKey === settings.model + st.delegate) return st.landmarker;
+  try { st.landmarker?.close(); } catch {}
+  st.landmarker = null;
+  const {mod, fileset} = await getVision();
+  const make = delegate => mod.PoseLandmarker.createFromOptions(fileset, {
+    baseOptions:{modelAssetPath:MODELS[settings.model], delegate},
+    runningMode:"VIDEO", numPoses:1,
+    minPoseDetectionConfidence:.5, minPosePresenceConfidence:.5, minTrackingConfidence:.5,
+  });
+  try { st.landmarker = await make(st.delegate); }
+  catch (e){
+    if (st.delegate !== "GPU") throw e;
+    st.delegate = "CPU"; st.landmarker = await make("CPU");
+  }
+  st.modelKey = settings.model + st.delegate;
+  return st.landmarker;
+}
+async function recoverWithCpu(){        // ถ้า GPU พังกลางทาง สลับไป CPU
+  if (st.recovering) return;
+  st.recovering = true;
+  try {
+    st.delegate = "CPU"; st.landmarker = null;
+    showGate({title:"กำลังสลับโหมดประมวลผล", body:"สักครู่", txt:true});
+    await getLandmarker();
+    showGate(null);
+  } catch (e){ gateError(e); }
+  st.recovering = false;
+}
+
+/* ============ กล้อง ============ */
+async function startCamera(){
+  stopCamera();
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error("NO_MEDIA");
+  st.stream = await navigator.mediaDevices.getUserMedia({
+    audio:false,
+    video:{facingMode:{ideal:st.facing}, width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30}},
+  });
+  video.srcObject = st.stream;
+  $("#mirror").classList.toggle("flip", st.facing === "user");
+  if (video.readyState < 1) await new Promise(r => video.addEventListener("loadedmetadata", r, {once:true}));
+  await video.play();
+  st.hasPts = false; st.lastT = -1;
+}
+function stopCamera(){
+  st.stream?.getTracks().forEach(t => t.stop());
+  st.stream = null; video.srcObject = null;
+}
+async function lockScreen(){ try { if ("wakeLock" in navigator) st.wake = await navigator.wakeLock.request("screen"); } catch {} }
+function unlockScreen(){ try { st.wake?.release(); } catch {} st.wake = null; }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && st.ex) lockScreen(); });
+
+/* ============ หน้าจอ ============ */
+function showGate(o){
+  const g = $("#gate");
+  if (!o){ g.hidden = true; return; }
+  g.hidden = false;
+  const t = $("#gateTitle"); t.textContent = o.title || ""; t.classList.toggle("txt", !!o.txt);
+  $("#gateBody").textContent = o.body || "";
+  const b = $("#gateBtn"); b.hidden = !o.btn; b.textContent = o.btn || ""; b.onclick = o.onClick || null;
+}
+function gateError(e){
+  console.error(e);
+  let body = "โหลดโมเดลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่";
+  if (e?.message === "NO_MEDIA") body = "เบราว์เซอร์นี้ใช้กล้องไม่ได้ ต้องเปิดหน้านี้ผ่าน HTTPS";
+  else if (e?.name === "NotAllowedError" || e?.name === "SecurityError") body = "ยังไม่ได้รับอนุญาตให้ใช้กล้อง อนุญาตกล้องในการตั้งค่าของเบราว์เซอร์ แล้วลองใหม่";
+  else if (e?.name === "NotFoundError" || e?.name === "OverconstrainedError") body = "ไม่พบกล้องที่ใช้ได้ ลองสลับกล้องหรือตรวจสอบอุปกรณ์";
+  showGate({title:"เริ่มไม่ได้", body, txt:true, btn:"ลองใหม่", onClick:() => openExercise(st.exKey)});
+}
+function setStatus(tone, text){
+  const s = $("#status");
+  if (s.dataset.tone !== tone) s.dataset.tone = tone;
+  if (s.textContent !== text) s.textContent = text;
+}
+function bump(){
+  const c = $("#count"); c.textContent = st.count;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  c.animate([{transform:"scale(1.18)"},{transform:"scale(1)"}], {duration:180, easing:"ease-out"});
+}
+function resetCounting(){
+  st.count = 0; st.phase = "wait"; st.rc = st.pc = st.bad = st.lost = 0; st.lastCount = 0;
+  $("#count").textContent = "0";
+  setStatus("warn", st.ex ? st.ex.start : "รอเริ่ม");
+}
+
+/* ============ ลูปตรวจจับ ============ */
+function smooth(lms, W, H){
+  const a = .55;
+  for (let i = 0; i < 33; i++){
+    const l = lms[i], p = st.pts[i], v = l.visibility ?? 1, x = l.x*W, y = l.y*H;
+    if (!st.hasPts){ p.x = x; p.y = y; p.v = v; }
+    else { p.x += (x-p.x)*a; p.y += (y-p.y)*a; p.v += (v-p.v)*a; }
+  }
+  st.hasPts = true;
+}
+function draw(W, H){
+  ctx.clearRect(0, 0, W, H);
+  const lw = Math.max(3, W/180);
+  ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.strokeStyle = "rgba(233,238,242,.75)";
+  for (const [a, b] of BONES){
+    if (P(a).v < VIS || P(b).v < VIS) continue;
+    ctx.beginPath(); ctx.moveTo(P(a).x, P(a).y); ctx.lineTo(P(b).x, P(b).y); ctx.stroke();
+  }
+  const hot = new Set(st.ex.joints);
+  for (let i = 0; i <= 28; i++){
+    if (i > 0 && i < 11) continue;
+    if (P(i).v < VIS) continue;
+    const h = hot.has(i);
+    ctx.beginPath(); ctx.fillStyle = h ? "#ff7a1a" : "#e9eef2";
+    ctx.arc(P(i).x, P(i).y, h ? lw*1.9 : lw*1.2, 0, Math.PI*2); ctx.fill();
+  }
+}
+function updateEngine(ev, now){
+  if (!ev.visible){
+    st.lost++; st.rc = st.pc = 0;
+    if (st.lost > 25) st.phase = "wait";
+    setStatus("warn", ev.hint);
+    return;
+  }
+  st.lost = 0;
+  st.rc = ev.ready ? st.rc + 1 : 0;
+  st.pc = ev.peak ? st.pc + 1 : 0;
+  st.bad = ev.ok ? 0 : st.bad + 1;
+  if (st.bad > 20 && st.phase !== "wait") st.phase = "wait";   // ท่าเสียนานเกินไป: ยกเลิกรอบนี้ ไม่นับ
+
+  if (st.phase === "wait"){
+    if (st.rc >= NEED){ st.phase = "ready"; beep(520, .06); setStatus("ok", "พร้อมแล้ว เริ่มได้เลย"); }
+    else setStatus("warn", ev.hint || st.ex.start);
+  } else if (st.phase === "ready"){
+    if (st.pc >= NEED){ st.phase = "peak"; setStatus("ok", st.ex.peakMsg); }
+    else setStatus("ok", "พร้อมแล้ว เริ่มได้เลย");
+  } else if (st.phase === "peak"){
+    if (st.rc >= NEED){
+      st.phase = "ready";
+      if (now - st.lastCount > 350){ st.count++; st.lastCount = now; bump(); beep(880, .09); }
+      setStatus("ok", "นับแล้ว");
+    } else setStatus("ok", st.ex.peakMsg);
+  }
+}
+function loop(){
+  st.raf = requestAnimationFrame(loop);
+  if (!st.landmarker || st.recovering || video.readyState < 2 || video.currentTime === st.lastT) return;
+  st.lastT = video.currentTime;
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W) return;
+  if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+  const now = performance.now();
+  let res;
+  try { res = st.landmarker.detectForVideo(video, now); }
+  catch (e){ console.error(e); if (st.delegate === "GPU") recoverWithCpu(); return; }
+  const lms = res.landmarks && res.landmarks[0];
+  if (!lms){
+    ctx.clearRect(0, 0, W, H); st.hasPts = false; st.lost++; st.rc = st.pc = 0;
+    if (st.lost > 25) st.phase = "wait";
+    if (st.running) setStatus("warn", "ไม่พบตัวคนในภาพ ถอยให้เห็นเต็มตัว");
+    return;
+  }
+  smooth(lms, W, H);
+  draw(W, H);
+  if (!st.running) return;
+  const ev = st.ex.evaluate(OFFSETS[settings.strict]);
+  updateEngine(ev, now);
+  if (settings.debug){
+    $("#debug").textContent = ev.visible
+      ? `${ev.label} ${ev.metric.toFixed(0)}°\nเฟส ${st.phase}  ready ${+ev.ready} peak ${+ev.peak} ok ${+ev.ok}\n${ev.extra}`
+      : `มองไม่เห็นจุดที่ต้องใช้\n${ev.hint}`;
+  }
+}
+
+/* ============ ขั้นตอนใช้งาน ============ */
+async function openExercise(key){
+  st.exKey = key; st.ex = EX[key]; st.running = false;
+  clearInterval(st.timer);
+  $("#home").hidden = true; $("#cam").hidden = false;
+  $("#exName").textContent = st.ex.name;
+  $("#debug").hidden = !settings.debug;
+  resetCounting();
+  showGate({title:"กำลังเตรียมกล้องและโมเดล", body:"ครั้งแรกอาจใช้เวลาสักครู่", txt:true});
+  try { await Promise.all([startCamera(), getLandmarker()]); }
+  catch (e){ return gateError(e); }
+  lockScreen();
+  cancelAnimationFrame(st.raf); st.raf = requestAnimationFrame(loop);
+  showGate({title:st.ex.name, body:"จัดตำแหน่งกล้องให้เห็นตัวตามคำแนะนำ แล้วกดเริ่ม จะมีเวลา 5 วินาทีให้เข้าท่า",
+    txt:true, btn:"เริ่มนับ", onClick:beginCountdown});
+}
+function beginCountdown(){
+  unlockAudio();
+  let n = 5;
+  const tick = () => showGate({title:String(n), body:st.ex.start});
+  tick(); beep(440, .05);
+  clearInterval(st.timer);
+  st.timer = setInterval(() => {
+    n--;
+    if (n <= 0){
+      clearInterval(st.timer); showGate(null);
+      resetCounting(); st.running = true; beep(880, .18);
+    } else { tick(); beep(440, .05); }
+  }, 1000);
+}
+function closeExercise(){
+  clearInterval(st.timer); cancelAnimationFrame(st.raf);
+  st.running = false; st.ex = null;
+  stopCamera(); unlockScreen(); showGate(null);
+  $("#cam").hidden = true; $("#home").hidden = false;
+}
+
+document.querySelectorAll("[data-ex]").forEach(b => b.addEventListener("click", () => { unlockAudio(); openExercise(b.dataset.ex); }));
+$("#back").addEventListener("click", closeExercise);
+$("#flip").addEventListener("click", async () => {
+  st.facing = st.facing === "user" ? "environment" : "user";
+  try { await startCamera(); } catch (e){ gateError(e); }
+});
+$("#reset").addEventListener("click", resetCounting);
+$("#minus").addEventListener("click", () => { st.count = Math.max(0, st.count - 1); $("#count").textContent = st.count; });
+
+/* ============ หน้าตั้งค่า ============ */
+const dlg = $("#settings");
+function syncSettingsUI(){
+  document.querySelectorAll('input[name="strict"]').forEach(r => r.checked = +r.value === settings.strict);
+  document.querySelectorAll('input[name="model"]').forEach(r => r.checked = r.value === settings.model);
+  $("#optSound").checked = settings.sound; $("#optDebug").checked = settings.debug;
+}
+document.querySelectorAll("[data-open-settings]").forEach(b => b.addEventListener("click", () => { syncSettingsUI(); dlg.showModal(); }));
+$("#settingsClose").addEventListener("click", () => dlg.close());
+document.querySelectorAll('input[name="strict"]').forEach(r => r.addEventListener("change", () => { settings.strict = +r.value; saveSettings(); }));
+document.querySelectorAll('input[name="model"]').forEach(r => r.addEventListener("change", () => { settings.model = r.value; saveSettings(); }));
+$("#optSound").addEventListener("change", e => { settings.sound = e.target.checked; saveSettings(); });
+$("#optDebug").addEventListener("change", e => { settings.debug = e.target.checked; $("#debug").hidden = !settings.debug; saveSettings(); });
+</script>
+</body>
+</html>
